@@ -110,16 +110,16 @@ describe('xCouch: Store', function() {
       })
       
       describe('After a save, the data', function() {
-        it('has a _id field', function() {
+        it('has a _id field that equals the return value of .id()', function() {
           assert.ok(item.get('_id'))
+          assert.strictEqual(item.get('_id'), item.id())
         })
-        it('has a _rev field', function() {
+        it('has a _rev field that equals the return value of .rev()', function() {
           assert.ok(item.get('_rev'))
+          assert.strictEqual(item.get('_rev'), item.rev())
         })
-        it('has a type field', function() {
+        it('has a type field that equals the return value of .type()', function() {
           assert.ok(item.get('type'))
-        })
-        it('the type field equals the return value of .type()', function() {
           assert.strictEqual(item.get('type'), item.type())
         })
       })
