@@ -9,18 +9,20 @@ Installation
 Usage Examples
 --------------
 
+### Create a new user and the dabase for the user
+
 ```js
 var Store = require('xcouch')
 
 Store.connect('http://admin:pass@localhost:5984', function(err) {
   if(err) throw err
-  Store.createUser('testUser', 'testPass', function(err) {
-  })
+  Store.createUser('name', 'pass', function(err, id, rev) {
+    if(err) throw err
+    // Hooray, we created a new user
 })
 ```
 
-How To Create Own Store Object Models
--------------------------------------
+### How To Create Own Store Object Models
 
 Create a file ``mymodel.js``:
 
@@ -136,6 +138,64 @@ Now type ``mocha -R spec --ignore-leaks`` and hit enter.
 And again, running the tests will change your CouchDB in a way  
 you might not like. Don't blame the author for lost data or ask  
 the author to clean up your database afterwards.
+
+Here is the output of the tests taken from a Win7Starter Netbook  
+:P
+
+```
+D:\Workspace\couchapps\q3\_xcouch>mocha -R spec --ignore-leaks --bail
+
+
+  xCouch: Store
+    V needs to connect (82ms)
+    The Store User
+      V must have a valid username (^[a-z][a-z0-9\_\$()\+\-\/]*$)
+      V must be created (896ms)
+      V and needs to connect too
+      The connect of the user gave us
+        V the user-document
+        V a function getObject() to get objects from the db of the user
+        V the db of the user as an nano-db-object
+        V a nano-object to interact with the couch as the user
+      A Store Object
+        V will be created with getObject()
+        V inherits from Store
+        V is some .type()
+        V has .get() to get and .set() to set fields of data
+        V is .dirty after a change
+        can be saved with .save()
+          V will be written if dirty (108ms)
+          V will not be written if not dirty
+          V can be forced to be written even if not dirty
+        After a save, the data
+          V has a _id field
+          V has a _rev field
+          V has a type field
+          V the type field equals the return value of .type()
+        can be loaded from the store with .load()
+          V will hold the same data (47ms)
+        can be removed from the store with .remove()
+          V .
+      A new Store Object
+        V will always be written on .save()
+
+  xCouch: Security
+    V we need to connect (52ms)
+    V someone creates UserOne (86ms)
+    V someone creates UserTwo (193ms)
+    V UserOne connects
+    V UserOne tries put a doc into the db of UserTwo: Not allowed. (65ms)
+    V UserOne tries to read a doc from the db of UserTwo: Not allowed.
+    V UserOne tries to remove a doc from the db of UserTwo: Not allowed.
+    V UserOne tries to list db "_users": Not allowed.
+    V UserOne tries to list the db of UserTwo: Not allowed.
+
+
+  ? 32 tests complete (2235ms)
+
+
+D:\Workspace\couchapps\q3\_xcouch>
+```
 
 API
 ---
