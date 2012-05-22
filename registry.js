@@ -138,6 +138,7 @@ function connectUser(name, pass, cb) {
       } else {
         obj.db = db
       }
+      obj.getObject = getObject
       return obj
     }
     

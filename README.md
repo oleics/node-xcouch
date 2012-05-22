@@ -142,6 +142,10 @@ Class: Store
 
 .type([type])
 
+.id([id])
+
+.rev([rev])
+
 #### Field Accessors
 
 .get([field])
@@ -164,11 +168,11 @@ Class: Store
 
 #### Related Object Accessors
 
-.getOne(type)
+.getOne(type, cb)
+
+.getMany(type, cb)
 
 .addOne(obj)
-
-.getMany(type)
 
 .addMany(obj || array of objects)
 

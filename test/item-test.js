@@ -136,10 +136,20 @@ describe('xCouch: Store', function() {
       })
       
       describe('can be removed from the store with .remove()', function(cb) {
+        var id
         it('.', function(cb) {
+          id = item.id()
           item.remove(function(err, written) {
             if(err) return cb(err)
             assert.ok(written)
+            cb()
+          })
+        })
+        it('will be gone in database', function(cb) {
+          var item2 = getObject('Item', id)
+          item2.load(function(err) {
+            assert.ok(err)
+            assert.ok(err instanceof Error)
             cb()
           })
         })

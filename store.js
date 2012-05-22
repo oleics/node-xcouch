@@ -32,7 +32,7 @@ function Store(id, rev) {
   
 }
 
-// Namespace of the store
+// Type of the store
 Store.prototype.type = function(type) {
   if(type!=null) {
     var old = this._type
@@ -40,6 +40,26 @@ Store.prototype.type = function(type) {
     return old
   }
   return this._type
+}
+
+// Id of the store
+Store.prototype.id = function(id) {
+  if(id!=null) {
+    var old = this.data._id
+    this.data._id = id
+    return old
+  }
+  return this.data._id
+}
+
+// Rev of the store
+Store.prototype.rev = function(rev) {
+  if(rev!=null) {
+    var old = this.data._rev
+    this.data._rev = rev
+    return old
+  }
+  return this.data._rev
 }
 
 // Get a field
@@ -82,42 +102,6 @@ Store.prototype.set = function(field, value) {
   }
 }
 
-// Keygen
-/* 
-Store.prototype._genIdInit = function(cb) {
-  var self = this
-  this.db.head(this.type(), function(err) {
-    if(err) {
-      self.db.insert({type: self.type(), nextId: 0}, self.type(), function(err) {
-        if(err) return cb(err)
-        cb()
-      })
-      return
-    }
-    cb()
-  })
-}
-
-Store.prototype._genId = function(cb) {
-  var self = this
-    , id
-  this.db.get(this.type(), function(err, d) {
-    if(err) {
-      self._genIdInit(function(err) {
-        if(err) return cb(err)
-        self._genId(cb)
-      })
-      return
-    }
-    id = d.nextId
-    d.nextId += 1
-    self.db.insert(d, function() {
-      if(err) return cb(err)
-      cb(null, id)
-    })
-  })
-}
- */
 // Persistance
 
 Store.prototype.idExists = function(id, cb) {
@@ -168,18 +152,7 @@ Store.prototype.save = function(force, cb) {
     force = false
   }
   cb = cb || dcb
-/*   
-  if(!(this.data._id != null)) {
-    // Create new id
-    this.dirty = true
-    this._genId(function(err, id) {
-      if(err) return cb(err)
-      self.data._id = id
-      self.save(cb)
-    })
-    return this
-  }
- */  
+  
   if(this.data._id && !this.dirty && !force) {
     process.nextTick(function() {
       cb(null, false)
@@ -187,13 +160,25 @@ Store.prototype.save = function(force, cb) {
     return this
   }
   
-  this.data.type = this.type()
-  this.db.insert(this.data, function(err, d) {
+  // Save related objects
+  this._saveOneToOne(function(err) {
     if(err) return cb(err)
-    self.data._id = d.id
-    self.data._rev = d.rev
-    self.dirty = false
-    cb(null, true)
+    self._setOneToOne()
+    
+    self._saveOneToMany(function(err) {
+      if(err) return cb(err)
+      self._setOneToMany()
+      
+      // Save this
+      self.data.type = self.type()
+      self.db.insert(self.data, function(err, d) {
+        if(err) return cb(err)
+        self.data._id = d.id
+        self.data._rev = d.rev
+        self.dirty = false
+        cb(null, true)
+      })
+    })
   })
   
   return this
@@ -211,9 +196,21 @@ Store.prototype.remove = function(cb) {
     return this
   }
   
-  this.db.destroy(this.data._id, this.data._rev, function(err) {
-    if(err && err.status_code !== 404) return cb(err)
-    cb(null, err ? false : true)
+  // Remove related objects
+  self._removeOneToOne(function(err) {
+    if(err) return cb(err)
+    
+    self._removeOneToMany(function(err) {
+      if(err) return cb(err)
+      
+      // Remove this
+      self.db.destroy(self.data._id, self.data._rev, function(err, info) {
+        if(err && err.status_code !== 404) return cb(err)
+        if(info.id) self.data._id = info.id
+        if(info.rev) self.data._rev = info.rev
+        cb(null, err ? false : true)
+      })
+    })
   })
   
   return this
@@ -254,6 +251,261 @@ Store.prototype.installDesign = function(cb) {
     // console.log(d)
     self.db.insert(d)
   });
+}
+
+// Related Objects
+
+// Gets the object in ._oneToOne or in .data._oneToOne
+Store.prototype.getOne = function(type, cb) {
+  var self = this
+  
+  if(this._oneToOne[type]) {
+    process.nextTick(function() {
+      cb(null, self._oneToOne[type])
+    })
+    return this
+  }
+  
+  if(this.data._oneToOne && this.data._oneToOne[type] != null) {
+    var obj = this.getObject(type, this.data._oneToOne[type])
+    obj.load(function(err) {
+      if(err) return cb(err)
+      self._oneToOne[type] = obj
+      cb(null, obj)
+    })
+    
+    return this
+  }
+  
+  process.nextTick(cb)
+  return this
+}
+
+// Gets the objects in ._oneToMany or in .data._oneToMany
+Store.prototype.getMany = function(type, cb) {
+  var self = this
+  
+  // Load every object by its id in .data._oneToMany that is not
+  // already in ._oneToMany
+  if(this.data._oneToMany && this.data._oneToMany[type]) {
+    if(!this._oneToMany) this._oneToMany = {}
+    
+    function exists(type, id) {
+      return self._oneToMany[type] && self._oneToMany[type].some(function(obj) {
+        return obj.id() === id
+      })
+    }
+    
+    var pending = 0
+    Object.keys(this.data._oneToMany[type]).forEach(function(id, index) {
+      if(!exists(type, id)) {
+        pending += 1
+        
+        var obj = self.getObject(type, id)
+        obj.load(function(err) {
+          if(err) throw err
+          
+          if(!self._oneToMany[type]) self._oneToMany[type] = []
+          self._oneToMany[type].splice(index, 0, obj)
+          
+          pending -= 1
+          if(pending === 0) {
+            cb(null, self._oneToMany[type])
+          }
+        })
+      }
+    })
+    if(pending !== 0) return this
+  }
+  
+  if(this._oneToMany && this._oneToMany[type]) {
+    process.nextTick(function() {
+      cb(null, self._oneToMany[type])
+    })
+    return this
+  }
+  
+  process.nextTick(cb)
+  return this
+}
+
+// Adds the object to ._oneToOne
+Store.prototype.addOne = function(obj) {
+  var type = obj.type()
+  
+  if(!this._oneToOne) this._oneToOne = {}
+  if(this._oneToOne[type] === obj) return this
+  
+  this._oneToOne[type] = obj
+  this.dirty = true
+  
+  return this
+}
+
+// Adds the object to ._oneToMany
+Store.prototype.addMany = function(obj) {
+  if(obj instanceof Array) {
+    var self = this
+    obj.forEach(function(o) {
+      self.addMany(o)
+    })
+  } else {
+    var type = obj.type()
+    
+    if(!this._oneToMany) this._oneToMany = {}
+    if(!this._oneToMany[type]) this._oneToMany[type] = []
+    if(this._oneToMany[type].indexOf(obj) !== -1) return this
+    
+    this._oneToMany[type].push(obj)
+    this.dirty = true
+  }
+  return this
+}
+
+// Calls .save() on every object in ._oneToOne
+Store.prototype._saveOneToOne = function(cb) {
+  if(this._oneToOne) {
+    var self = this
+      , keys = Object.keys(self._oneToOne)
+      , pending = keys.length
+      ;
+    
+    Object.keys(keys).forEach(function(type) {
+      self._oneToOne[type].save(function(err) {
+        if(err) throw err
+        
+        pending -= 1
+        if(pending === 0) cb()
+      })
+    })
+    
+    if(pending === 0) process.nextTick(cb)
+    return
+  }
+  process.nextTick(cb)
+}
+
+// Calls .save() on every object in ._oneToMany
+Store.prototype._saveOneToMany = function(cb) {
+  if(this._oneToMany) {
+    var self = this
+      , pending = 0
+      ;
+    
+    Object.keys(self._oneToMany).forEach(function(type) {
+      pending += self._oneToMany[type].length
+      
+      self._oneToMany[type].forEach(function(obj) {
+        obj.save(function(err) {
+          if(err) throw err
+          
+          pending -= 1
+          if(pending === 0) cb()
+        })
+      })
+      
+      if(pending === 0) process.nextTick(cb)
+    })
+    
+    if(pending === 0) process.nextTick(cb)
+    return
+  }
+  process.nextTick(cb)
+}
+
+// Sets the ids of the objects in ._oneToOne to .data._oneToOne
+Store.prototype._setOneToOne = function() {
+  var self = this
+  
+  if(self._oneToOne) {
+    if(!self.data._oneToOne) self.data._oneToOne = {}
+    
+    Object.keys(self._oneToOne).forEach(function(type) {
+      var id = self._oneToOne[type].id()
+      
+      if(!self.data._oneToOne[type]) self.data._oneToOne[type] = {}
+      if(self.data._oneToOne[type] === id) return
+      
+      self.data._oneToOne[type] = id
+      self.dirty = true
+    })
+  }
+  
+  return this
+}
+
+// Sets the ids of the objects in ._oneToMany to .data._oneToMany
+Store.prototype._setOneToMany = function() {
+  var self = this
+  
+  if(self._oneToMany) {
+    if(!self.data._oneToMany) self.data._oneToMany = {}
+    
+    Object.keys(self._oneToMany).forEach(function(type) {
+      if(!self.data._oneToMany[type]) self.data._oneToMany[type] = []
+      
+      self._oneToMany[type].forEach(function(obj, index) {
+        var id = obj.id()
+        
+        if(self.data._oneToMany[type].indexOf(id) !== -1) return
+        
+        self.data._oneToMany[type].splice(index, 0, id)
+        self.dirty = true
+      })
+    })
+  }
+  return this
+}
+
+// Calls .remove() on every object in ._oneToOne
+Store.prototype._removeOneToOne = function(cb) {
+  if(this._oneToOne) {
+    var self = this
+      , keys = Object.keys(self._oneToOne)
+      , pending = keys.length
+      ;
+    
+    Object.keys(keys).forEach(function(type) {
+      self._oneToOne[type].remove(function(err) {
+        if(err) throw err
+        
+        pending -= 1
+        if(pending === 0) cb()
+      })
+    })
+    
+    if(pending === 0) process.nextTick(cb)
+    return
+  }
+  process.nextTick(cb)
+}
+
+// Calls .remove() on every object in ._oneToMany
+Store.prototype._removeOneToMany = function(cb) {
+  if(this._oneToMany) {
+    var self = this
+      , pending = 0
+      ;
+    
+    Object.keys(self._oneToMany).forEach(function(type) {
+      pending += self._oneToMany[type].length
+      
+      self._oneToMany[type].forEach(function(obj) {
+        obj.remove(function(err) {
+          if(err) throw err
+          
+          pending -= 1
+          if(pending === 0) cb()
+        })
+      })
+      
+      if(pending === 0) process.nextTick(cb)
+    })
+    
+    if(pending === 0) process.nextTick(cb)
+    return
+  }
+  process.nextTick(cb)
 }
 
 // Items
