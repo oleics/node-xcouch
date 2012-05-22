@@ -14,6 +14,17 @@
     "url": "https://github.com/oleics/node-xcouch/issues"
   },
   "keywords": [
+    "xcouch",
+    "couch",
+    "couchdb",
+    "nano",
+    "request",
+    "persistence",
+    "model",
+    "user",
+    "authentication",
+    "security",
+    "manager"
   ],
   "main": "./index.js",
   "bin": {
@@ -28,6 +39,6 @@
     "test": "mocha -R spec --ignore-leaks"
   },
   "devDependencies": {
-    "mocha": "1.0.x"    
+    "mocha": "~1.0.0"    
   }
 }
