@@ -1,0 +1,15 @@
+{
+  "dsn": "http://[admin]:[pass]@localhost:5984",
+  "user": {
+    "name": "xcouchtestuser",
+    "pass": "acb123"
+  },
+  "user_one": {
+    "name": "xcouchtestuserone",
+    "pass": "acb123"
+  },
+  "user_two": {
+    "name": "xcouchtestusertwo",
+    "pass": "acb123"
+  }
+}
