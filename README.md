@@ -102,6 +102,76 @@ Security
   * Only admins can create users. Direct sign-up to the CouchDB  
     will be disabled per '_security' document.
 
+API
+---
+
+### Setup
+
+Store.connect(dsn, callback)  
+``callback(err)``
+
+### Users
+
+Store.createUser(name, pass, callback)  
+``callback(err, id, rev)``
+
+Store.connectUser(name, pass, callback)  
+``callback(err, doc, getObject, db, nano)``
+
+Store.destroyUser(name, pass, callback)  
+``callback(err, doc)``
+
+### Store Objects
+
+Store.register(name, constructor)
+
+Class: Store
+------------
+
+### Properties
+
+.dirty
+
+.data
+
+.db
+
+### Methods
+
+#### Configuration Accessors
+
+.type([type])
+
+#### Field Accessors
+
+.get([field])
+
+.set([hash] || [field, value])
+
+#### Persistence
+
+.exists(callback)  
+``callback(err, exists)``
+
+.load(callback)  
+``callback(err)``
+
+.save([force, ] callback)  
+``callback(err, written)``
+
+.remove(callback)  
+``callback(err, written)``
+
+#### Related Object Accessors
+
+.getOne(type)
+
+.addOne(obj)
+
+.getMany(type)
+
+.addMany(obj || array of objects)
+
 How To Run The Tests
 --------------------
 
@@ -193,79 +263,7 @@ D:\Workspace\couchapps\q3\_xcouch>mocha -R spec --ignore-leaks --bail
 
   ? 32 tests complete (2235ms)
 
-
-D:\Workspace\couchapps\q3\_xcouch>
 ```
-
-API
----
-
-### Setup
-
-Store.connect(dsn, callback)  
-``callback(err)``
-
-### Users
-
-Store.createUser(name, pass, callback)  
-``callback(err, id, rev)``
-
-Store.connectUser(name, pass, callback)  
-``callback(err, doc, getObject, db, nano)``
-
-Store.destroyUser(name, pass, callback)  
-``callback(err, doc)``
-
-### Store Objects
-
-Store.register(name, constructor)
-
-Class: Store
-------------
-
-### Properties
-
-.dirty
-
-.data
-
-.db
-
-### Methods
-
-#### Configuration Accessors
-
-.type([type])
-
-#### Field Accessors
-
-.get([field])
-
-.set([hash] || [field, value])
-
-#### Persistence
-
-.exists(callback)  
-``callback(err, exists)``
-
-.load(callback)  
-``callback(err)``
-
-.save([force, ] callback)  
-``callback(err, written)``
-
-.remove(callback)  
-``callback(err, written)``
-
-#### Related Object Accessors
-
-.getOne(type)
-
-.addOne(obj)
-
-.getMany(type)
-
-.addMany(obj || array of objects)
 
 MIT License
 -----------
