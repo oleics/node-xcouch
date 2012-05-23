@@ -10,7 +10,7 @@ module.exports =
   , destroyUser: destroyUser
   }
 
-var NANO = require('../_nano')
+var NANO = require('nano')
   , crypto = require('crypto')
   , url = require('url')
   , _ci
