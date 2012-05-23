@@ -333,27 +333,59 @@ describe('xCouch: Store', function() {
     })
     
     describe('Changes', function() {
-      it('.subscribe()', function(cb) {
+      it('.subscribe() and .unsubscribe()', function(cb) {
+        // Create a new object
         var item1 = getObject('Item')
+        
+        // Save it
         item1.save(function(err) {
           if(err) return cb(err)
           
+          // Create another object with the id of item1
           var item2 = getObject('Item', item1.id())
+          
+          // Subscribe to the changes-feed
           item2.subscribe()
           
+          // Make a change to item1 and save that change
           item1.set('foo', 'bar')
           item1.save(function(err) {
             if(err) return cb(err)
             
-            // changes need some time to propagate
+            // Notice that changes need some time to propagate
             setTimeout(function() {
+              // item2 should now hold the same data as item1
               assert.deepEqual(item1.get(), item2.get())
-              cb()
-            }, 100)
+              
+              // Unsubscribe item2 from changes feed
+              item2.unsubscribe()
+              
+              // Make another change to item1 and save it
+              item1.set('bar', 'foo')
+              item1.save(function(err) {
+                if(err) return cb(err)
+                
+                // Again, changes need some time to propagate
+                setTimeout(function() {
+                  // the data of item2 is now different from item1
+                  assert.notDeepEqual(item1.get(), item2.get())
+                  
+                  // We need to load item2 to get the changes of item1
+                  item2.load(function(err) {
+                    if(err) return cb(err)
+                    
+                    // item2 should now hold the same data as item1
+                    assert.deepEqual(item1.get(), item2.get())
+                    
+                    cb()
+                  })
+                }, 300)
+              })
+            }, 300)
           })
         })
       })
-      it('.unsubscribe()')
+      
     })
   })
 })
