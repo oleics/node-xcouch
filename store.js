@@ -27,6 +27,8 @@ function Store(id, rev) {
   
   this.db = null
   
+  this.onFeedChange = this.onFeedChange.bind(this)
+  
   // this._genIdInit(function(){})
   // this.installDesign()
   
@@ -255,22 +257,23 @@ Store.prototype.installDesign = function(cb) {
 
 // Related Objects
 
-// Gets the object in ._oneToOne or in .data._oneToOne
+// Gets the object in .oneToOne or in .data.oneToOne
 Store.prototype.getOne = function(type, cb) {
   var self = this
   
-  if(this._oneToOne[type]) {
+  if(this.oneToOne && this.oneToOne[type]) {
     process.nextTick(function() {
-      cb(null, self._oneToOne[type])
+      cb(null, self.oneToOne[type])
     })
     return this
   }
   
-  if(this.data._oneToOne && this.data._oneToOne[type] != null) {
-    var obj = this.getObject(type, this.data._oneToOne[type])
+  if(this.data.oneToOne && this.data.oneToOne[type] != null) {
+    if(!self.oneToOne) self.oneToOne = {}
+    var obj = this.getObject(type, this.data.oneToOne[type])
     obj.load(function(err) {
       if(err) return cb(err)
-      self._oneToOne[type] = obj
+      self.oneToOne[type] = obj
       cb(null, obj)
     })
     
@@ -281,23 +284,30 @@ Store.prototype.getOne = function(type, cb) {
   return this
 }
 
-// Gets the objects in ._oneToMany or in .data._oneToMany
+// Gets the objects in .oneToMany or in .data.oneToMany
 Store.prototype.getMany = function(type, cb) {
   var self = this
   
-  // Load every object by its id in .data._oneToMany that is not
-  // already in ._oneToMany
-  if(this.data._oneToMany && this.data._oneToMany[type]) {
-    if(!this._oneToMany) this._oneToMany = {}
+  // Load every object by its id in .data.oneToMany that is not
+  // already in .oneToMany
+  if(this.data.oneToMany && this.data.oneToMany[type]) {
+    if(!this.oneToMany) this.oneToMany = {}
+    if(!this.oneToMany[type]) this.oneToMany[type] = []
     
     function exists(type, id) {
-      return self._oneToMany[type] && self._oneToMany[type].some(function(obj) {
-        return obj.id() === id
+      return self.oneToMany[type] && self.oneToMany[type].some(function(obj) {
+        return obj && obj.id() === id
       })
     }
     
+    // Make room
+    var num = this.data.oneToMany[type].length
+    while(num>this.oneToMany[type].length) {
+      this.oneToMany[type].push(false)
+    }
+    
     var pending = 0
-    Object.keys(this.data._oneToMany[type]).forEach(function(id, index) {
+    this.data.oneToMany[type].forEach(function(id, index) {
       if(!exists(type, id)) {
         pending += 1
         
@@ -305,12 +315,12 @@ Store.prototype.getMany = function(type, cb) {
         obj.load(function(err) {
           if(err) throw err
           
-          if(!self._oneToMany[type]) self._oneToMany[type] = []
-          self._oneToMany[type].splice(index, 0, obj)
+          // self.oneToMany[type].splice(index, 0, obj)
+          self.oneToMany[type][index] = obj
           
           pending -= 1
           if(pending === 0) {
-            cb(null, self._oneToMany[type])
+            cb(null, self.oneToMany[type])
           }
         })
       }
@@ -318,9 +328,9 @@ Store.prototype.getMany = function(type, cb) {
     if(pending !== 0) return this
   }
   
-  if(this._oneToMany && this._oneToMany[type]) {
+  if(this.oneToMany && this.oneToMany[type]) {
     process.nextTick(function() {
-      cb(null, self._oneToMany[type])
+      cb(null, self.oneToMany[type])
     })
     return this
   }
@@ -329,20 +339,20 @@ Store.prototype.getMany = function(type, cb) {
   return this
 }
 
-// Adds the object to ._oneToOne
+// Adds the object to .oneToOne
 Store.prototype.addOne = function(obj) {
   var type = obj.type()
   
-  if(!this._oneToOne) this._oneToOne = {}
-  if(this._oneToOne[type] === obj) return this
+  if(!this.oneToOne) this.oneToOne = {}
+  if(this.oneToOne[type] === obj) return this
   
-  this._oneToOne[type] = obj
+  this.oneToOne[type] = obj
   this.dirty = true
   
   return this
 }
 
-// Adds the object to ._oneToMany
+// Adds the object to .oneToMany
 Store.prototype.addMany = function(obj) {
   if(obj instanceof Array) {
     var self = this
@@ -352,26 +362,26 @@ Store.prototype.addMany = function(obj) {
   } else {
     var type = obj.type()
     
-    if(!this._oneToMany) this._oneToMany = {}
-    if(!this._oneToMany[type]) this._oneToMany[type] = []
-    if(this._oneToMany[type].indexOf(obj) !== -1) return this
+    if(!this.oneToMany) this.oneToMany = {}
+    if(!this.oneToMany[type]) this.oneToMany[type] = []
+    if(this.oneToMany[type].indexOf(obj) !== -1) return this
     
-    this._oneToMany[type].push(obj)
+    this.oneToMany[type].push(obj)
     this.dirty = true
   }
   return this
 }
 
-// Calls .save() on every object in ._oneToOne
+// Calls .save() on every object in .oneToOne
 Store.prototype._saveOneToOne = function(cb) {
-  if(this._oneToOne) {
+  if(this.oneToOne) {
     var self = this
-      , keys = Object.keys(self._oneToOne)
+      , keys = Object.keys(self.oneToOne)
       , pending = keys.length
       ;
     
-    Object.keys(keys).forEach(function(type) {
-      self._oneToOne[type].save(function(err) {
+    keys.forEach(function(type) {
+      self.oneToOne[type].save(function(err) {
         if(err) throw err
         
         pending -= 1
@@ -385,17 +395,17 @@ Store.prototype._saveOneToOne = function(cb) {
   process.nextTick(cb)
 }
 
-// Calls .save() on every object in ._oneToMany
+// Calls .save() on every object in .oneToMany
 Store.prototype._saveOneToMany = function(cb) {
-  if(this._oneToMany) {
+  if(this.oneToMany) {
     var self = this
       , pending = 0
       ;
     
-    Object.keys(self._oneToMany).forEach(function(type) {
-      pending += self._oneToMany[type].length
+    Object.keys(self.oneToMany).forEach(function(type) {
+      pending += self.oneToMany[type].length
       
-      self._oneToMany[type].forEach(function(obj) {
+      self.oneToMany[type].forEach(function(obj) {
         obj.save(function(err) {
           if(err) throw err
           
@@ -413,20 +423,20 @@ Store.prototype._saveOneToMany = function(cb) {
   process.nextTick(cb)
 }
 
-// Sets the ids of the objects in ._oneToOne to .data._oneToOne
+// Sets the ids of the objects in .oneToOne to .data.oneToOne
 Store.prototype._setOneToOne = function() {
   var self = this
   
-  if(self._oneToOne) {
-    if(!self.data._oneToOne) self.data._oneToOne = {}
+  if(self.oneToOne) {
+    if(!self.data.oneToOne) self.data.oneToOne = {}
     
-    Object.keys(self._oneToOne).forEach(function(type) {
-      var id = self._oneToOne[type].id()
+    Object.keys(self.oneToOne).forEach(function(type) {
+      var id = self.oneToOne[type].id()
       
-      if(!self.data._oneToOne[type]) self.data._oneToOne[type] = {}
-      if(self.data._oneToOne[type] === id) return
+      if(!self.data.oneToOne[type]) self.data.oneToOne[type] = {}
+      if(self.data.oneToOne[type] === id) return
       
-      self.data._oneToOne[type] = id
+      self.data.oneToOne[type] = id
       self.dirty = true
     })
   }
@@ -434,22 +444,29 @@ Store.prototype._setOneToOne = function() {
   return this
 }
 
-// Sets the ids of the objects in ._oneToMany to .data._oneToMany
+// Sets the ids of the objects in .oneToMany to .data.oneToMany
 Store.prototype._setOneToMany = function() {
   var self = this
   
-  if(self._oneToMany) {
-    if(!self.data._oneToMany) self.data._oneToMany = {}
+  if(self.oneToMany) {
+    if(!self.data.oneToMany) self.data.oneToMany = {}
     
-    Object.keys(self._oneToMany).forEach(function(type) {
-      if(!self.data._oneToMany[type]) self.data._oneToMany[type] = []
+    Object.keys(self.oneToMany).forEach(function(type) {
+      if(!self.data.oneToMany[type]) self.data.oneToMany[type] = []
+    
+      // Make room
+      var num = self.oneToMany[type].length
+      while(num>self.data.oneToMany[type].length) {
+        self.data.oneToMany[type].push(false)
+      }
       
-      self._oneToMany[type].forEach(function(obj, index) {
+      self.oneToMany[type].forEach(function(obj, index) {
         var id = obj.id()
         
-        if(self.data._oneToMany[type].indexOf(id) !== -1) return
+        if(self.data.oneToMany[type].indexOf(id) !== -1) return
         
-        self.data._oneToMany[type].splice(index, 0, id)
+        // self.data.oneToMany[type].splice(index, 0, id)
+        self.data.oneToMany[type][index] = id
         self.dirty = true
       })
     })
@@ -457,16 +474,16 @@ Store.prototype._setOneToMany = function() {
   return this
 }
 
-// Calls .remove() on every object in ._oneToOne
+// Calls .remove() on every object in .oneToOne
 Store.prototype._removeOneToOne = function(cb) {
-  if(this._oneToOne) {
+  if(this.oneToOne) {
     var self = this
-      , keys = Object.keys(self._oneToOne)
+      , keys = Object.keys(self.oneToOne)
       , pending = keys.length
       ;
     
-    Object.keys(keys).forEach(function(type) {
-      self._oneToOne[type].remove(function(err) {
+    keys.forEach(function(type) {
+      self.oneToOne[type].remove(function(err) {
         if(err) throw err
         
         pending -= 1
@@ -480,17 +497,17 @@ Store.prototype._removeOneToOne = function(cb) {
   process.nextTick(cb)
 }
 
-// Calls .remove() on every object in ._oneToMany
+// Calls .remove() on every object in .oneToMany
 Store.prototype._removeOneToMany = function(cb) {
-  if(this._oneToMany) {
+  if(this.oneToMany) {
     var self = this
       , pending = 0
       ;
     
-    Object.keys(self._oneToMany).forEach(function(type) {
-      pending += self._oneToMany[type].length
+    Object.keys(self.oneToMany).forEach(function(type) {
+      pending += self.oneToMany[type].length
       
-      self._oneToMany[type].forEach(function(obj) {
+      self.oneToMany[type].forEach(function(obj) {
         obj.remove(function(err) {
           if(err) throw err
           
@@ -506,6 +523,22 @@ Store.prototype._removeOneToMany = function(cb) {
     return
   }
   process.nextTick(cb)
+}
+
+//// Changes
+
+Store.prototype.subscribe = function() {
+  this.db.feed.on('change', this.onFeedChange)
+}
+
+Store.prototype.unsubscribe = function() {
+  this.db.feed.removeListener('change', this.onFeedChange)
+}
+
+Store.prototype.onFeedChange = function(change) {
+  if(change.id === this.id()) {
+    console.log('change:', change)
+  }
 }
 
 // Items

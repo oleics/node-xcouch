@@ -118,7 +118,7 @@ function addModel(type, ctor) {
   registry[type] = ctor
 }
 
-// Users and their databases
+//// Users and their databases
 
 // Connects a user
 function connectUser(name, pass, cb) {
@@ -128,6 +128,9 @@ function connectUser(name, pass, cb) {
     var nano = NANO(_ci.protocol+'//'+name+':'+pass+'@'+_ci.host+'/')
       , db = nano.use(name)
       ;
+    
+    db.feed = db.follow({since: 'now'})
+    // db.feed.follow()
     
     function getObject(type, id, rev) {
       var ctor = registry[type]
@@ -139,6 +142,7 @@ function connectUser(name, pass, cb) {
         obj.db = db
       }
       obj.getObject = getObject
+      // obj.subscribe()
       return obj
     }
     

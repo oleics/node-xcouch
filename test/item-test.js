@@ -110,6 +110,10 @@ describe('xCouch: Store', function() {
       })
       
       describe('After a save, the data', function() {
+        it('has a data property that equals the return value of .get()', function() {
+          assert.ok(item.data)
+          assert.strictEqual(item.data, item.get())
+        })
         it('has a _id field that equals the return value of .id()', function() {
           assert.ok(item.get('_id'))
           assert.strictEqual(item.get('_id'), item.id())
@@ -166,6 +170,171 @@ describe('xCouch: Store', function() {
           cb()
         })
       })
+    })
+    
+    describe('Related Objects', function() {
+      describe('One to One', function() {
+        var item, item2
+        
+        describe('.addOne()', function() {
+          it('adds an object', function(cb) {
+            item = getObject('Item')
+            item2 = getObject('Item')
+            item.addOne(item2)
+            cb()
+          })
+        })
+        
+        describe('.save() will save all related objects and the object to the db', function() {
+          it('', function(cb) {
+            item.save(function(err) {
+              if(err) return cb(err)
+              item.getOne('Item', function(err, item3) {
+                if(err) return cb(err)
+                assert.ok(item3)
+                assert.deepEqual(item2.get(), item3.get())
+                item3.exists(function(err, exists) {
+                  if(err) return cb(err)
+                  assert.ok(exists === true)
+                  cb()
+                })
+              })
+            })
+          })
+        })
+        
+        describe('.getOne()', function() {
+          it('gets the object previously added and saved', function(cb) {
+            var item4 = getObject('Item', item.id())
+            item4.load(function(err) {
+              if(err) return cb(err)
+              assert.deepEqual(item4.get(), item.get())
+              item4.getOne('Item', function(err, item3) {
+                if(err) return cb(err)
+                assert.ok(item3)
+                assert.deepEqual(item2.get(), item3.get())
+                cb()
+              })
+            })
+          })
+        })
+        
+        describe('.remove() will remove all related objects and the object from the db', function() {
+          it('', function(cb) {
+            item.remove(function(err) {
+              if(err) return cb(err)
+              item.getOne('Item', function(err, item3) {
+                if(err) return cb(err)
+                assert.ok(item3)
+                assert.deepEqual(item2.get(), item3.get())
+                item3.exists(function(err, exists) {
+                  if(err) return cb(err)
+                  assert.ok(exists === false)
+                  cb()
+                })
+              })
+            })
+          })
+        })
+      })
+      
+      describe('One to Many', function() {
+        var item, item2, items = []
+        
+        describe('.addMany()', function() {
+          it('adds many objects', function(cb) {
+            item = getObject('Item')
+            item2 = getObject('Item')
+            item.addMany(item2)
+            items.push(getObject('Item'))
+            items.push(getObject('Item'))
+            items.push(getObject('Item'))
+            items.push(getObject('Item'))
+            items.push(getObject('Item'))
+            item.addMany(items)
+            cb()
+          })
+        })
+        
+        describe('.save() will save all related objects and the object to the db', function() {
+          it('', function(cb) {
+            item.save(function(err) {
+              if(err) return cb(err)
+              item.getMany('Item', function(err, items_) {
+                if(err) return cb(err)
+                assert.ok(items_)
+                assert.deepEqual(item2.get(), items_[0].get())
+                assert.strictEqual(item2, items_[0])
+                items.forEach(function(obj, index) {
+                  assert.deepEqual(obj.get(), items_[index+1].get())
+                  assert.strictEqual(obj, items_[index+1])
+                })
+                
+                var pending = items_.length
+                items_.forEach(function(obj) {
+                  obj.exists(function(err, exists) {
+                    assert.ok(exists === true)
+                    pending -= 1
+                    if(pending === 0) cb()
+                  })
+                })
+              })
+            })
+          })
+        })
+        
+        describe('.getMany()', function() {
+          it('gets the objects previously added and saved', function(cb) {
+            var item4 = getObject('Item', item.id())
+            item4.load(function(err) {
+              if(err) return cb(err)
+              assert.deepEqual(item4.get(), item.get())
+              item4.getMany('Item', function(err, items_) {
+                if(err) return cb(err)
+                assert.ok(items_)
+                assert.strictEqual(items.length+1, items_.length)
+                assert.deepEqual(item2.get(), items_[0].get())
+                items.forEach(function(obj, index) {
+                  assert.deepEqual(obj.get(), items_[index+1].get())
+                })
+                cb()
+              })
+            })
+          })
+        })
+        
+        describe('.remove() will remove all related objects and the object from the db', function() {
+          it('', function(cb) {
+            item.remove(function(err) {
+              if(err) return cb(err)
+              item.getMany('Item', function(err, items_) {
+                if(err) return cb(err)
+                assert.ok(items_)
+                assert.deepEqual(item2.get(), items_[0].get())
+                assert.strictEqual(item2, items_[0])
+                items.forEach(function(obj, index) {
+                  assert.deepEqual(obj.get(), items_[index+1].get())
+                  assert.strictEqual(obj, items_[index+1])
+                })
+                
+                var pending = items_.length
+                items_.forEach(function(obj) {
+                  obj.exists(function(err, exists) {
+                    assert.ok(exists === false)
+                    pending -= 1
+                    if(pending === 0) cb()
+                  })
+                })
+              })
+            })
+          })
+        })
+      })
+    })
+    
+    describe('Changes', function() {
+        it('.subscribe()')
+        it('.unsubscribe()')
     })
   })
 })

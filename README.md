@@ -176,6 +176,11 @@ Class: Store
 
 .addMany(obj || array of objects)
 
+#### Changes
+
+.subscribe()
+.unsubscribe()
+
 How To Run The Tests
 --------------------
 
