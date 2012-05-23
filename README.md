@@ -226,10 +226,10 @@ D:\Workspace\couchapps\q3\_xcouch>mocha -R spec --ignore-leaks --bail
 
 
   xCouch: Store
-    V needs to connect (82ms)
+    V needs to connect (119ms)
     The Store User
       V must have a valid username (^[a-z][a-z0-9\_\$()\+\-\/]*$)
-      V must be created (896ms)
+      V must be created (965ms)
       V and needs to connect too
       The connect of the user gave us
         V the user-document
@@ -243,34 +243,58 @@ D:\Workspace\couchapps\q3\_xcouch>mocha -R spec --ignore-leaks --bail
         V has .get() to get and .set() to set fields of data
         V is .dirty after a change
         can be saved with .save()
-          V will be written if dirty (108ms)
+          V will be written if dirty
           V will not be written if not dirty
           V can be forced to be written even if not dirty
         After a save, the data
-          V has a _id field
-          V has a _rev field
-          V has a type field
-          V the type field equals the return value of .type()
+          V has a data property that equals the return value of .get()
+          V has a _id field that equals the return value of .id()
+          V has a _rev field that equals the return value of .rev()
+          V has a type field that equals the return value of .type()
         can be loaded from the store with .load()
-          V will hold the same data (47ms)
+          V will hold the same data
         can be removed from the store with .remove()
           V .
+          V will be gone in database
       A new Store Object
         V will always be written on .save()
+      Related Objects
+        One to One
+          .addOne()
+            V adds an object
+          .save() will save all related objects and the object to the db
+            V
+          .getOne()
+            V gets the object previously added and saved (39ms)
+          .remove() will remove all related objects and the object from the db
+            V  (43ms)
+        One to Many
+          .addMany()
+            V adds many objects
+          .save() will save all related objects and the object to the db
+            V  (107ms)
+          .getMany()
+            V gets the objects previously added and saved (58ms)
+          .remove() will remove all related objects and the object from the db
+            V  (138ms)
+      Changes
+        - .subscribe()
+        - .unsubscribe()
 
   xCouch: Security
-    V we need to connect (52ms)
-    V someone creates UserOne (86ms)
-    V someone creates UserTwo (193ms)
+    V we need to connect (39ms)
+    V someone creates UserOne (96ms)
+    V someone creates UserTwo (80ms)
     V UserOne connects
-    V UserOne tries put a doc into the db of UserTwo: Not allowed. (65ms)
+    V UserOne tries put a doc into the db of UserTwo: Not allowed.
     V UserOne tries to read a doc from the db of UserTwo: Not allowed.
     V UserOne tries to remove a doc from the db of UserTwo: Not allowed.
     V UserOne tries to list db "_users": Not allowed.
     V UserOne tries to list the db of UserTwo: Not allowed.
 
 
-  ? 32 tests complete (2235ms)
+  ? 43 tests complete (2854ms)
+   2 tests pending
 
 ```
 
