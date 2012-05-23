@@ -10,8 +10,15 @@ module.exports =
   , destroyUser: destroyUser
   }
 
-var NANO = require('nano')
-  , crypto = require('crypto')
+var NANO
+try {
+  NANO = require('../_nano')
+} catch(err) {
+  err = null
+  NANO = require('nano')
+}
+
+var crypto = require('crypto')
   , url = require('url')
   , _ci
   , _security = {}
@@ -39,7 +46,7 @@ function connect(uri, cb) {
     // As the user within uri is allowed to fetch _securtiy,
     // she will 'probably' be allowed to add itself to _security:
     if(_ci.auth) {
-      user = _ci.auth.split(':',1).shift()
+      var user = _ci.auth.split(':',1).shift()
       if(d.admins.names.indexOf(user) === -1) {
         d.admins.names.push(user)
       }
@@ -236,7 +243,7 @@ function userLogin(name, pass, cb) {
     var hash = crypto.createHash('sha1')
     hash.update(pass)
     hash.update(doc.salt)
-    password_sha = hash.digest('hex')
+    var password_sha = hash.digest('hex')
     if(doc.password_sha === password_sha) {
       return cb(null, doc)
     }
