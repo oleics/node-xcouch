@@ -1,14 +1,11 @@
 {
   "name": "xcouch",
-  "version": "0.0.0",
+  "version": "0.1.0",
   "description": "couch [x] lightweight",
-  "author": {
-    "name": "Oliver Leics",
-    "email": "oliver.leics@gmail.com"
-  },
+  "author": "Oliver Leics <oliver.leics@gmail.com>",
   "repository": {
     "type": "git",
-    "url": "https://github.com/oleics/node-xcouch.git"
+    "url": "git://github.com/oleics/node-xcouch.git"
   },
   "bugs": {
     "url": "https://github.com/oleics/node-xcouch/issues"
@@ -27,11 +24,11 @@
     "manager"
   ],
   "main": "./index.js",
-  "bin": {
+  "bin": {},
+  "directories": {},
+  "engines": {
+    "node": ">= 0.6.0"
   },
-  "directories": {
-  },
-  "engines": {"node": ">= 0.6.0"},
   "dependencies": {
     "nano": "~3.0.0"
   },
@@ -39,6 +36,7 @@
     "test": "mocha -R spec --ignore-leaks"
   },
   "devDependencies": {
-    "mocha": "~1.0.0"    
-  }
+    "mocha": "~1.0.0"
+  },
+  "optionalDependencies": {}
 }
