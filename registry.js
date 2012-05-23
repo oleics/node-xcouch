@@ -136,13 +136,6 @@ function connectUser(name, pass, cb) {
       , db = nano.use(name)
       ;
     
-    // db.feed = db.follow({since: 'now'})
-    // db.feed.on('error', function(err) {
-      // We never ever fail!!! ;-)
-      // console.error(err)
-    // })
-    // db.feed.follow()
-    
     function getObject(type, id, rev) {
       var ctor = registry[type]
         , obj = new ctor(id, rev)
@@ -153,7 +146,6 @@ function connectUser(name, pass, cb) {
         obj.db = db
       }
       obj.getObject = getObject
-      // obj.subscribe()
       return obj
     }
     
