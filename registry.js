@@ -136,7 +136,11 @@ function connectUser(name, pass, cb) {
       , db = nano.use(name)
       ;
     
-    db.feed = db.follow({since: 'now'})
+    // db.feed = db.follow({since: 'now'})
+    // db.feed.on('error', function(err) {
+      // We never ever fail!!! ;-)
+      // console.error(err)
+    // })
     // db.feed.follow()
     
     function getObject(type, id, rev) {

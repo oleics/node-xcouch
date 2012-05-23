@@ -11,9 +11,14 @@ function dcb(err) {
   if(err) throw err
 }
 
+var INST_ID = 0
+
 // 
 function Store(id, rev) {
   if(!(this instanceof Store)) return new Store(id, rev)
+  
+  INST_ID += 1
+  this.__instid = INST_ID
   
   this.data = {}
   if(id != null) {
@@ -27,8 +32,6 @@ function Store(id, rev) {
   
   this.db = null
   
-  this.onFeedChange = this.onFeedChange.bind(this)
-  
   // this._genIdInit(function(){})
   // this.installDesign()
   
@@ -37,11 +40,11 @@ function Store(id, rev) {
 // Type of the store
 Store.prototype.type = function(type) {
   if(type!=null) {
-    var old = this._type
-    this._type = type
+    var old = this.data.type
+    this.data.type = type
     return old
   }
-  return this._type
+  return this.data.type
 }
 
 // Id of the store
@@ -77,9 +80,10 @@ Store.prototype.get = function(field) {
 Store.prototype.set = function(field, value) {
   switch(arguments.length) {
     case 2:
-      var old = this.data[field]
-      this.data[field] = value
-      if(value !== old) {
+      var old
+      if(this.data[field] !== value) {
+        old = this.data[field]
+        this.data[field] = value
         this.dirty = true
       }
       return old
@@ -87,9 +91,9 @@ Store.prototype.set = function(field, value) {
     case 1:
       var self = this, old = {}, dirty = false
       Object.keys(field).forEach(function(k) {
-        old[k] = self.data[k]
-        self.data[k] = field[k]
-        if(!dirty && field[k] !== old[k]) {
+        if(self.data[k] !== field[k]) {
+          old[k] = self.data[k]
+          self.data[k] = field[k]
           dirty = true
         }
       })
@@ -104,7 +108,7 @@ Store.prototype.set = function(field, value) {
   }
 }
 
-// Persistance
+//// Persistance
 
 Store.prototype.idExists = function(id, cb) {
   cb = cb || dcb
@@ -172,13 +176,14 @@ Store.prototype.save = function(force, cb) {
       self._setOneToMany()
       
       // Save this
-      self.data.type = self.type()
+      self.pauseChangesFeed()
       self.db.insert(self.data, function(err, d) {
         if(err) return cb(err)
         self.data._id = d.id
         self.data._rev = d.rev
         self.dirty = false
         cb(null, true)
+        self.resumeChangesFeed()
       })
     })
   })
@@ -206,11 +211,18 @@ Store.prototype.remove = function(cb) {
       if(err) return cb(err)
       
       // Remove this
-      self.db.destroy(self.data._id, self.data._rev, function(err, info) {
+      self.pauseChangesFeed()
+      self.db.destroy(self.id(), self.rev(), function(err, info) {
         if(err && err.status_code !== 404) return cb(err)
-        if(info.id) self.data._id = info.id
-        if(info.rev) self.data._rev = info.rev
+        
+        if(info.id) self.id(info.id)
+        if(info.rev) self.rev(info.rev)
+        self.data._deleted = info.ok
+        
+        // console.log('DELETE', self.__instid, info, self.get())
+        
         cb(null, err ? false : true)
+        self.resumeChangesFeed()
       })
     })
   })
@@ -218,7 +230,7 @@ Store.prototype.remove = function(cb) {
   return this
 }
 
-// Design
+//// Design
 
 Store.prototype.byItem = function(id, cb) {
   this.db.view(this.type(), 'byItem', {key: id}, function(err, d) {
@@ -255,7 +267,7 @@ Store.prototype.installDesign = function(cb) {
   });
 }
 
-// Related Objects
+//// Related Objects
 
 // Gets the object in .oneToOne or in .data.oneToOne
 Store.prototype.getOne = function(type, cb) {
@@ -528,17 +540,41 @@ Store.prototype._removeOneToMany = function(cb) {
 //// Changes
 
 Store.prototype.subscribe = function() {
-  this.db.feed.on('change', this.onFeedChange)
+  var self = this
+  
+  if(this.feed) return
+  
+  this.feed = this.db.follow({since: 'now'})
+  
+  this.feed.on('error', function(err) {
+    // We never ever fail!!! ;-)
+  })
+  
+  this.feed.filter = function(doc, req) {
+    return doc._id === self.id() && doc._rev !== self.rev()
+  }
+  
+  this.feed.on('change', function(change) {
+    self.set(change.doc)
+  })
+  
+  this.feed.follow()
 }
 
 Store.prototype.unsubscribe = function() {
-  this.db.feed.removeListener('change', this.onFeedChange)
+  if(!this.feed) return
+  this.feed.stop()
+  this.feed.removeAllListeners()
+  this.feed = null
+  delete this.feed
 }
 
-Store.prototype.onFeedChange = function(change) {
-  if(change.id === this.id()) {
-    console.log('change:', change)
-  }
+Store.prototype.pauseChangesFeed = function() {
+  if(this.feed) this.feed.pause()
+}
+
+Store.prototype.resumeChangesFeed = function() {
+  if(this.feed) this.feed.resume()
 }
 
 // Items

@@ -79,7 +79,7 @@ describe('xCouch: Store', function() {
         item.set({rand: rand})
         assert.strictEqual(rand, item.get('rand'))
         
-        assert.deepEqual({now: now, rand: rand}, item.get())
+        assert.deepEqual({type: 'Item', now: now, rand: rand}, item.get())
       })
       it('is .dirty after a change', function() {
         assert.ok(item.dirty)
@@ -333,7 +333,26 @@ describe('xCouch: Store', function() {
     })
     
     describe('Changes', function() {
-        it('.subscribe()')
+        it('.subscribe()', function(cb) {
+          var item1 = getObject('Item')
+          item1.save(function(err) {
+            if(err) return cb(err)
+            
+            var item2 = getObject('Item', item1.id())
+            item2.subscribe()
+            
+            item1.set('foo', 'bar')
+            item1.save(function(err) {
+              if(err) return cb(err)
+              
+              // changes need some time to propagate
+              setTimeout(function() {
+                assert.deepEqual(item1.get(), item2.get())
+                cb()
+              }, 100)
+            })
+          })
+        })
         it('.unsubscribe()')
     })
   })
