@@ -121,9 +121,9 @@ Store.connectUser(name, pass, callback)
 Store.destroyUser(name, pass, callback)  
 ``callback(err, doc)``
 
-### Store Objects
+### Store Object Models
 
-Store.register(name, constructor)
+Store.addModel(name, constructor)
 
 Class: Store
 ------------
