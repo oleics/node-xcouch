@@ -115,6 +115,9 @@ Store.connect(dsn, callback)
 Store.createUser(name, pass, callback)  
 ``callback(err, id, rev)``
 
+Store.loginUser(name, pass, callback)  
+``callback(err, doc)``
+
 Store.connectUser(name, pass, callback)  
 ``callback(err, doc, getObject, db, nano)``
 
