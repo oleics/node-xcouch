@@ -8,6 +8,7 @@ var Store = require('..')
     , 'bar': true
     , 'r_2': true
     
+    , '': false
     , '1': false
     , '1two': false
     , '_r2': false
