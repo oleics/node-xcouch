@@ -168,7 +168,7 @@ function createUser(name, pass, cb) {
   // Check name
   if(!isValidName(name)) return cb(new Error('Invalid name "'+name+'"'))
   // Check pass
-  if(!isValidPass(pass))) return cb(new Error('Invalid pass: "'+pass+'"'))
+  if(!isValidPass(pass)) return cb(new Error('Invalid pass: "'+pass+'"'))
   // gen salt
   var salt = crypto.randomBytes(16).toString('hex')
   // gen sha1
