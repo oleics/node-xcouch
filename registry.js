@@ -161,7 +161,7 @@ function connectUser(name, pass, cb) {
 // Creates a new user
 function createUser(name, pass, cb) {
   // Check name
-  if(!isValidName) return cb(new Error('Invalid name: '+name))
+  if(!isValidName(name)) return cb(new Error('Invalid name: '+name))
   // gen salt
   var salt = crypto.randomBytes(16).toString('hex')
   // gen sha1
