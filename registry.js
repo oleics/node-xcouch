@@ -7,7 +7,7 @@ module.exports =
   , isValidName: isValidName
   , isValidPass: isValidPass
   , createUser: createUser
-  // , userLogin: userLogin
+  , loginUser: loginUser
   , connectUser: connectUser
   , destroyUser: destroyUser
   }
@@ -139,7 +139,7 @@ function isValidPass(pass) {
 
 // Connects a user
 function connectUser(name, pass, cb) {
-  userLogin(name, pass, function(err, user) {
+  loginUser(name, pass, function(err, user) {
     if(err) return cb(err)
     
     var nano = NANO(_ci.protocol+'//'+encodeURIComponent(name)+':'+encodeURIComponent(pass)+'@'+_ci.host+'/')
@@ -240,8 +240,8 @@ function setDatabaseSecurity(name, cb) {
   })
 }
 
-// Checks userLogin credenciales
-function userLogin(name, pass, cb) {
+// Checks loginUser credenciales
+function loginUser(name, pass, cb) {
   // Get the user
   var db = nano().use(user_dbname)
   db.get(user_namespace+':'+name, function(err, doc) {
@@ -272,7 +272,7 @@ function destroyDatabase(name, cb) {
 
 // Destroys a user AND her database
 function destroyUser(name, pass, cb) {
-  userLogin(name, pass, function(err, user) {
+  loginUser(name, pass, function(err, user) {
     if(err) return cb(err)
     nano().use(user_dbname).destroy(user._id, user._rev, function(err, doc) {
       if(err) return cb(err)
