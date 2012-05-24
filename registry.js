@@ -5,6 +5,7 @@ module.exports =
   , addModel: addModel
   
   , isValidName: isValidName
+  , isValidPass: isValidPass
   , createUser: createUser
   // , userLogin: userLogin
   , connectUser: connectUser
@@ -132,6 +133,10 @@ function isValidName(name) {
   return nameRegExp.test(name) === true
 }
 
+function isValidPass(pass) {
+  return pass.length != null && pass.length > 0
+}
+
 // Connects a user
 function connectUser(name, pass, cb) {
   userLogin(name, pass, function(err, user) {
@@ -161,7 +166,9 @@ function connectUser(name, pass, cb) {
 // Creates a new user
 function createUser(name, pass, cb) {
   // Check name
-  if(!isValidName(name)) return cb(new Error('Invalid name: '+name))
+  if(!isValidName(name)) return cb(new Error('Invalid name "'+name+'"'))
+  // Check pass
+  if(!isValidPass(pass))) return cb(new Error('Invalid pass: "'+pass+'"'))
   // gen salt
   var salt = crypto.randomBytes(16).toString('hex')
   // gen sha1
