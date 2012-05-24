@@ -4,6 +4,7 @@ module.exports =
   
   , addModel: addModel
   
+  , isValidName: isValidName
   , createUser: createUser
   // , userLogin: userLogin
   , connectUser: connectUser
@@ -127,12 +128,16 @@ function addModel(type, ctor) {
 
 //// Users and their databases
 
+function isValidName(name) {
+  return nameRegExp.test(name) === true
+}
+
 // Connects a user
 function connectUser(name, pass, cb) {
   userLogin(name, pass, function(err, user) {
     if(err) return cb(err)
     
-    var nano = NANO(_ci.protocol+'//'+name+':'+pass+'@'+_ci.host+'/')
+    var nano = NANO(_ci.protocol+'//'+encodeURIComponent(name)+':'+encodeURIComponent(pass)+'@'+_ci.host+'/')
       , db = nano.use(name)
       ;
     
@@ -156,7 +161,7 @@ function connectUser(name, pass, cb) {
 // Creates a new user
 function createUser(name, pass, cb) {
   // Check name
-  if(nameRegExp.test(name) !== true) return cb(new Error('Invalid name: '+name))
+  if(!isValidName) return cb(new Error('Invalid name: '+name))
   // gen salt
   var salt = crypto.randomBytes(16).toString('hex')
   // gen sha1

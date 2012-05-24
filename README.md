@@ -125,6 +125,10 @@ Store.destroyUser(name, pass, callback)
 
 Store.addModel(name, constructor)
 
+### Helpers
+
+.isValidName(name)
+
 Class: Store
 ------------
 
@@ -179,6 +183,7 @@ Class: Store
 #### Changes
 
 .subscribe()
+
 .unsubscribe()
 
 How To Run The Tests
